@@ -1,0 +1,32 @@
+---
+title: "ST 558 Homework 5"
+author: "Luke Freudenheim"
+format: html
+---
+
+# Task 1: Conceptual Questions
+
+1. What is the purpose of using cross-validation when fitting a random forest model?
+
+> The purpose of using cross-validation for a random forest model is to look into tuning of the folds. You can use it to figure out the best value of the folds to be at which provides the most accurate model.
+
+2. Describe the bagged tree algorithm.
+
+> A bagged tree algorithm takes multiple random samples (or bootstraps) of the original data set. It would then train a model on that sample from the original data set. The final prediction values are the average of all of these predictions from the bootstraps.
+
+3. What is meant by a general linear model?
+
+> A general linear model is a broader type of linear model that has a continuous response variable  and allows for both continuous and categorical predictors.
+
+4. When fitting a multiple linear regression model, what does adding an interaction term do? That is,
+what does it allow the model to do differently as compared to when it is not included in the model?
+
+> Adding an interaction term into a model allows you to examine how a certain predictor behaves under different values of another variable.
+
+5. Why do we split our data into a training and test set?
+
+> We split the data into a training and test set so that we can test our models in terms of accuracy. We are able to train our models using the training set and then test their predictions they make on the test set.
+
+
+
+>
