@@ -27,6 +27,179 @@ what does it allow the model to do differently as compared to when it is not inc
 
 > We split the data into a training and test set so that we can test our models in terms of accuracy. We are able to train our models using the training set and then test their predictions they make on the test set.
 
+# Task 2: Fitting Models
+
+## Reading in the Data
+
+```{r, include=FALSE}
+library(tidyverse)
+library(caret)
+```
 
 
->
+```{r}
+heart_data <- read_csv("heart.csv")
+head(heart_data)
+```
+
+## Exploring the Data Set
+
+We will now explore some summaries of our data set. We will look at missingness in values along with relationships of variables to HeartDisease (our response).
+
+```{r}
+# Checking on Missingness in Data Set
+sum(is.na(heart_data))
+# Checking out summary of data and relationships
+summary(heart_data)
+```
+
+We will now look at some relationships between variables to our response variable. First, we will look at a contingency table of sex vs. heart disease.
+
+```{r}
+table(heart_data$Sex, heart_data$HeartDisease)
+```
+
+We will now look at a couple of correlations. We will look at the correlation between resting BP and heart disease, and cholesterol level and heart disease.
+
+```{r}
+# Correlation between resting BP and Heart Disease
+cor(heart_data$RestingBP, heart_data$HeartDisease)
+
+# Correlation between cholesterol and Heart Disease
+cor(heart_data$Cholesterol, heart_data$HeartDisease)
+```
+
+Next, we will create a factor version of the HeartDisease variable and remove unnecessary variables in our data set.
+
+```{r}
+heart_data <- heart_data |>
+  mutate(HeartDiseaseFactor = as.factor(HeartDisease)) |>
+  select(-c(HeartDisease, ST_Slope))
+heart_data
+```
+
+We will now create dummy variables from the categorical predictors.
+
+```{r}
+# Creating a set of dummy variables
+dummies <- dummyVars( ~ Sex + ExerciseAngina + ChestPainType + RestingECG, data = heart_data)
+# Using the syntax given in the caret file to show dummy variables
+df <- as.data.frame(predict(dummies, newdata = heart_data))
+# Binding the data frames into the new data
+heart_data_new <- cbind(heart_data, df)
+head(heart_data_new)
+```
+
+# Split the Data
+
+Now, we will split our data set into a training set and a testing set of data. We will put 80% of the data in the training set and then 20% of the data into the testing set.
+
+```{r}
+set.seed(72)
+#indices to split on
+train <- sample(1:nrow(heart_data_new), size = nrow(heart_data_new)*0.8)
+test <- setdiff(1:nrow(heart_data_new), train)
+#subset
+HeartTrain <- heart_data_new[train, ]
+HeartTest <- heart_data_new[test, ]
+```
+
+# kNN Model
+
+We will fit a kNN model with 10 fold cross validation with 3 repeats. We will consider k values from 1 to 40 and select the value of k that maximizes accuracy.
+
+```{r}
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+set.seed(17)
+knn_fit <- train(HeartDiseaseFactor ~ ., data = HeartTrain |>
+                                          select(where(is.numeric), HeartDiseaseFactor)
+                 , method = "knn",
+                  trControl=trctrl,
+                  preProcess = c("center", "scale"),
+                  tuneLength = 40)
+knn_fit
+```
+
+Based on the results of the kNN cross validation, we can see that the optimal tuning parameter is at k = 7. We will use this model on the test set to predict the values of our response variable. Then we will look at a confusion matrix of 
+
+```{r}
+knn_predictions <- predict(knn_fit, newdata = HeartTest)
+confusionMatrix(data = HeartTest$HeartDiseaseFactor, reference = knn_predictions)
+```
+
+Our model with k = 7 had 84.24% accuracy in predicting the test set of data.
+
+# Logisitic Regression Model
+
+```{r}
+Logistic_Model_1 <- train(HeartDiseaseFactor ~ Age + MaxHR + Cholesterol, data = HeartTrain, 
+                 method = "glm",
+                 family = "binomial",
+                 trControl=trctrl,
+                 preProcess = c("center", "scale"))
+summary(Logistic_Model_1)
+```
+
+In this model, all of the predictors are significant. The AIC of the model is 862.19. We will now add RestingBP into the model.
+
+```{r}
+Logistic_Model_2 <- train(HeartDiseaseFactor ~ Age + MaxHR + Cholesterol + RestingBP, data = HeartTrain, 
+                 method = "glm",
+                 family = "binomial",
+                 trControl=trctrl,
+                 preProcess = c("center", "scale"))
+summary(Logistic_Model_2)
+```
+
+As we can see, the restingBP predictor is not significant to our model and the AIC of the second model is more than the first model. Therefore, the first model is a better fit than the second. Next, we will take out RestingBP from the model and add Sex to it.
+
+```{r}
+Logistic_Model_3 <- train(HeartDiseaseFactor ~ Age + MaxHR + Cholesterol + Sex, data = HeartTrain, 
+                 method = "glm",
+                 family = "binomial",
+                 trControl=trctrl,
+                 preProcess = c("center", "scale"))
+summary(Logistic_Model_3)
+```
+
+When we add Sex into the logistic regression model, we can see that it is very significant. The AIC of the new model is 827.52, which is about 35 units less than the AIC of the other two models, meaning that it is more accurate. We will use this model for our prediction of the test set.
+
+As we can see from the model, the coefficients of the age and sex variables are positive and the coefficients maximum heart rate and cholesterol are negative. Holding all other variables constant, the variables that have positive coefficients increase the log odds of having heart disease and the opposite is true of those that have negative coefficients.
+
+Next, we will use this model to predict the test set of data and explore how the model did by using a confusion matrix.
+
+```{r}
+LR_predictions <- predict(Logistic_Model_3, newdata = HeartTest)
+confusionMatrix(data = HeartTest$HeartDiseaseFactor, reference = LR_predictions)
+```
+
+As we can see from the confusion matrix, our final logistic regression model has 75.54% accuracy in terms of predicting the test set.
+
+# Tree Models
+
+## Classification Tree Model
+
+First we will fit a classification tree model on our data set.
+
+```{r}
+classification_Tree <- train(HeartDiseaseFactor ~ Age + Sex + MaxHR + Cholesterol + ExerciseAngina, data = HeartTrain, 
+                 method = "rpart",
+                 trControl=trctrl,
+                 preProcess = c("center", "scale"),
+                 tuneGrid = expand.grid(cp = seq(0,0.1, by=0.001)))
+classification_Tree
+```
+
+The turning parameter with the highest accuracy was cp = .006. We will use this to make predictions and a confusion matrix on our test set.
+
+```{r}
+CT_predictions <- predict(classification_Tree, newdata = HeartTest)
+confusionMatrix(data = HeartTest$HeartDiseaseFactor, reference = LR_predictions)
+```
+
+The classification tree model had 75.54% accuracy in predicting the test set.
+
+## Random Forest Model
+
+## Boosted Tree Model
+
