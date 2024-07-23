@@ -34,6 +34,7 @@ what does it allow the model to do differently as compared to when it is not inc
 ```{r, include=FALSE}
 library(tidyverse)
 library(caret)
+library(gbm)
 ```
 
 
@@ -201,5 +202,52 @@ The classification tree model had 75.54% accuracy in predicting the test set.
 
 ## Random Forest Model
 
+Next, we will fit a random forest model on our training set. 
+
+```{r}
+randomForestModel <- train(HeartDiseaseFactor ~ Age + Sex + MaxHR + Cholesterol + ExerciseAngina, data = HeartTrain, 
+                 method = "rf",
+                 trControl=trctrl,
+                 preProcess = c("center", "scale"),
+                 tuneGrid = data.frame(mtry = 1:5))
+randomForestModel
+```
+
+The turning parameter with the highest accuracy was mtry = 1. We will use this to make predictions and a confusion matrix on our test set.
+
+```{r}
+RF_predictions <- predict(randomForestModel, newdata = HeartTest)
+confusionMatrix(data = HeartTest$HeartDiseaseFactor, reference = RF_predictions)
+```
+
+This random forest model had 83.15% accuracy on predicting the test set.
+
 ## Boosted Tree Model
 
+Next, we will fit a boosted tree model on our training set. 
+
+```{r}
+BoostedTreeModel <- train(HeartDiseaseFactor ~ Age + Sex + MaxHR + Cholesterol + ExerciseAngina, data = HeartTrain, 
+                 method = "gbm",
+                 trControl=trctrl,
+                 preProcess = c("center", "scale"),
+                 tuneGrid = expand.grid(n.trees = c(25,50,100,200),
+                                        interaction.depth = c(1,2,3),
+                                        shrinkage = 0.1,
+                                        n.minobsinnode = 10),
+                 verbose = FALSE)
+BoostedTreeModel
+```
+
+The turning parameters with the highest accuracy were n.trees = 25 and interaction.depth = 1. We will use this to make predictions and a confusion matrix on our test set.
+
+```{r}
+Boosted_predictions <- predict(BoostedTreeModel, newdata = HeartTest)
+confusionMatrix(data = HeartTest$HeartDiseaseFactor, reference = Boosted_predictions)
+```
+
+This boosted model had 84.24% accuracy on predicting the test set.
+
+# Wrap Up
+
+Overall, the model that performed best in terms of accuracy of predicting the test set was the boosted tree model at 84.24% accuracy.
