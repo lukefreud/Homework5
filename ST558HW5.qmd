@@ -1,6 +1,7 @@
 ---
 title: "ST 558 Homework 5"
 author: "Luke Freudenheim"
+description: In this report, we will compare different types of statistical models. We will start by answering some conceptual questions about models, cross-validation, and prediction. Next we will look at a heart disease data set and explore the data set. After this, we will fit many types of models onto this data set while using cross-validation. Lastly, we will compare the different types of models in terms of accuracy by using a confusion matrix.
 format: html
 ---
 
